@@ -82,8 +82,17 @@ def run(playwright: Playwright):
             print("Next button is disabled. Reached last page.")
             break
 
+        first_row_text = rows.first.inner_text()
+
         next_button.click()
-        page.wait_for_selector(".table-wrap")
+        
+        page.wait_for_function(
+            """prev => {
+                const row = document.querySelector("table tbody tr");
+                return row && row.innerText !== prev;
+            }""",
+            arg=first_row_text
+        )
 
     browser.close()
 
@@ -91,7 +100,7 @@ def run(playwright: Playwright):
 
 if __name__ == "__main__":
     with sync_playwright() as playwright:
-        results = run(playwright)
+        run(playwright)
 
     # logging.info(f"Scraping completed. Total records: {len(results)}")
 
