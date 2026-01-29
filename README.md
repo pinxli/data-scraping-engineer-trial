@@ -1,7 +1,8 @@
 ## How to install dependencies:
 
 1. Python 3.11+ is required for this project.
-2. Install the required packages:
+2. It's recommended to use a virtual environment before installing dependencies.
+3. Install the required packages:
 ```bash
 pip install -r requirements.txt
 ```
@@ -26,4 +27,5 @@ python scraper.py
 - CAPTCHA must be solved manually
 - The always starts from page 1. Resume functionality is not implemented.
 - Rows that fail to process are skipped. No retry logic is included.
+
 
