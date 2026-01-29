@@ -84,10 +84,15 @@ def run(playwright: Playwright):
     while True:
         logging.info(f"Processing page {current_page}...")
 
-        page.wait_for_selector("table tbody tr")
+        page.wait_for_selector("table tbody tr", timeout=10000)
         
         rows = page.locator("table tbody tr")
         rows_count = rows.count()
+
+        if rows_count == 0:
+            logging.warning("No rows found after CAPTCHA..")
+            break
+
         for i in range(rows_count):
             row = rows.nth(i)
             res = _process_data(row, page)
@@ -101,30 +106,30 @@ def run(playwright: Playwright):
 
             time.sleep(DELAY / 5) # row delay
 
-        next_button = page.locator("button.page-btn", has_text="Next")
-        
         try:
+            next_button = page.locator("button.page-btn", has_text="Next")
+            
             if next_button.is_disabled():
                 logging.info("Reached last page.")
                 break
+
+            first_row_text = rows.first.inner_text()
+
+            next_button.click()
+            time.sleep(DELAY) # page delay
+            
+            page.wait_for_function(
+                """prev => {
+                    const row = document.querySelector("table tbody tr");
+                    return row && row.innerText !== prev;
+                }""",
+                arg=first_row_text
+            )
         except Exception as e:
-            logging.error(f"Next button not found or disabled check failed. \n {e}")
+            logging.error(f"Failed to navigate to next page. \n {e}")
             break
 
-        first_row_text = rows.first.inner_text()
-
-        next_button.click()
-        time.sleep(DELAY) # page delay
-
         current_page += 1
-        
-        page.wait_for_function(
-            """prev => {
-                const row = document.querySelector("table tbody tr");
-                return row && row.innerText !== prev;
-            }""",
-            arg=first_row_text
-        )
 
     browser.close()
     return results
