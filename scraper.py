@@ -72,8 +72,12 @@ def run(playwright: Playwright):
     _manual_captcha()
 
     # Search
-    page.fill("input[id='q']", SEARCH_QUERY)
-    page.click("button:has-text('Search')")
+    try:
+        page.fill("input[id='q']", SEARCH_QUERY)
+        page.click("button:has-text('Search')")
+    except Exception as e:
+        logging.error(f"Failed to perform search. \n {e}")
+        return
 
     current_page = 1
     results = []
