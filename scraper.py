@@ -1,6 +1,6 @@
-
+import os
 import json
-# import logging
+import logging
 
 from playwright.sync_api import sync_playwright, Playwright
 
@@ -9,12 +9,20 @@ OUTPUT_FILE = "output.json"
 SEARCH_QUERY = "farms corp"
 DELAY = 1
 
-# logging.basicConfig(
-#     filename="logs/scraper.log",
-#     level=logging.INFO,
-#     format="%(asctime)s - %(levelname)s - %(message)s"
-# )
+os.makedirs("logs", exist_ok=True)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    handlers=[
+        logging.FileHandler("logs/scraper.log"),
+        logging.StreamHandler()
+    ]
+)
+
+def _manual_captcha():
+    print("Please solve the CAPTCHA manually in the browser.")
+    input("Press ENTER after CAPTCHA is solved...")
 
 def _process_data(row, page):
     try:
@@ -45,7 +53,7 @@ def _process_data(row, page):
             "agent_email": agent_email
         }
     except Exception as e:
-        print(f"ERROR: Failed to process data. \n {e}")
+        logging.error(f"Failed to process data. \n {e}")
         return None
 
 def run(playwright: Playwright):
@@ -56,12 +64,11 @@ def run(playwright: Playwright):
     try:
         page.goto(BASE_URL)
     except Exception as e:
-        print(f"ERROR: Failed to load page. \n {e}")
+        logging.error(f"Failed to load page. \n {e}")
         return
     
     # Captcha
-    print("Please solve the CAPTCHA manually in the browser.")
-    input("Press ENTER after CAPTCHA is solved...")
+    _manual_captcha()
 
     # Search
     page.fill("input[id='q']", SEARCH_QUERY)
@@ -78,20 +85,20 @@ def run(playwright: Playwright):
             res = _process_data(row, page)
             
             if not res:
+                logging.warning(f"Failed to process record {i + 1}. Skipping...")
                 continue
             
             results.append(res)
-            print("\n\n", res)
-            break
+            logging.info(f"Record processed. Business name: {res['business_name']}")
 
         next_button = page.locator("button.page-btn", has_text="Next")
         
         try:
             if next_button.is_disabled():
-                print("Next button is disabled. Reached last page.")
+                logging.info("Reached last page.")
                 break
         except Exception as e:
-            print(f"ERROR: Next button not found or disabled check failed. \n {e}")
+            logging.error(f"Next button not found or disabled check failed. \n {e}")
             break
 
         first_row_text = rows.first.inner_text()
@@ -107,16 +114,16 @@ def run(playwright: Playwright):
         )
 
     browser.close()
-
+    return results
 
 
 if __name__ == "__main__":
     with sync_playwright() as playwright:
-        run(playwright)
+        results = run(playwright)
 
-    # logging.info(f"Scraping completed. Total records: {len(results)}")
+    logging.info(f"Scraping completed. Total records: {len(results)}")
 
-    # # Save output
-    # with open(OUTPUT_FILE, "w") as f:
-    #     json.dump(all_records, f, indent=4)
-    # logging.info(f"Results saved to {OUTPUT_FILE}")
+    # Save output
+    with open(OUTPUT_FILE, "w") as f:
+        json.dump(results, f, indent=4)
+    logging.info(f"Results saved to {OUTPUT_FILE}")
