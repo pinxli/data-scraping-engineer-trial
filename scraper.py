@@ -20,40 +20,47 @@ DELAY = 1
 
 
 def _process_data(row, page):
-    business_name = row.locator("td:nth-child(1)").inner_text().strip()
-    registration_id = row.locator("td:nth-child(2)").inner_text().strip()
-    status = row.locator("td:nth-child(3)").inner_text().strip()
-    filing_date = row.locator("td:nth-child(4)").inner_text().strip()
-    
-    row.locator("td:nth-child(1) a").click()
-    page.wait_for_selector("div.small.muted:has-text('Registered Agent')")
+    try:
+        business_name = row.locator("td:nth-child(1)").inner_text().strip()
+        registration_id = row.locator("td:nth-child(2)").inner_text().strip()
+        status = row.locator("td:nth-child(3)").inner_text().strip()
+        filing_date = row.locator("td:nth-child(4)").inner_text().strip()
+        
+        row.locator("td:nth-child(1) a").click()
+        page.wait_for_selector("div.small.muted:has-text('Registered Agent')")
 
-    agent_card = page.locator("div.small.muted", has_text="Registered Agent")
-    agent_card = agent_card.locator("..")
+        agent_card = page.locator("div.small.muted", has_text="Registered Agent")
+        agent_card = agent_card.locator("..")
 
-    agent_name = agent_card.locator("div").nth(1).inner_text().strip()
-    agent_address = agent_card.locator("div").nth(2).inner_text().strip()
-    agent_email = agent_card.locator("code").inner_text().strip()
-    page.go_back()
-    page.wait_for_load_state("domcontentloaded")
+        agent_name = agent_card.locator("div").nth(1).inner_text().strip()
+        agent_address = agent_card.locator("div").nth(2).inner_text().strip()
+        agent_email = agent_card.locator("code").inner_text().strip()
+        page.go_back()
+        page.wait_for_load_state("domcontentloaded")
 
-    res = {
-        "business_name": business_name,
-        "registration_id": registration_id,
-        "status": status,
-        "filing_date": filing_date,
-        "agent_name": agent_name,
-        "agent_address": agent_address,
-        "agent_email": agent_email
-    }
-    return res
+        return {
+            "business_name": business_name,
+            "registration_id": registration_id,
+            "status": status,
+            "filing_date": filing_date,
+            "agent_name": agent_name,
+            "agent_address": agent_address,
+            "agent_email": agent_email
+        }
+    except Exception as e:
+        print(f"ERROR: Failed to process data. \n {e}")
+        return None
 
 def run(playwright: Playwright):
     browser = playwright.chromium.launch(headless=False, slow_mo=50)
     context = browser.new_context()
     page = context.new_page()
     
-    page.goto(BASE_URL)
+    try:
+        page.goto(BASE_URL)
+    except Exception as e:
+        print(f"ERROR: Failed to load page. \n {e}")
+        return
     
     # Captcha
     print("Please solve the CAPTCHA manually in the browser.")
@@ -73,13 +80,21 @@ def run(playwright: Playwright):
             row = rows.nth(i)
             res = _process_data(row, page)
             
+            if not res:
+                continue
+            
             results.append(res)
             print("\n\n", res)
+            break
 
         next_button = page.locator("button.page-btn", has_text="Next")
         
-        if next_button.is_disabled():
-            print("Next button is disabled. Reached last page.")
+        try:
+            if next_button.is_disabled():
+                print("Next button is disabled. Reached last page.")
+                break
+        except Exception as e:
+            print(f"ERROR: Next button not found or disabled check failed. \n {e}")
             break
 
         first_row_text = rows.first.inner_text()
