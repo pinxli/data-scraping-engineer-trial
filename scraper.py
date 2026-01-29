@@ -91,6 +91,8 @@ def run(playwright: Playwright):
             results.append(res)
             logging.info(f"Record processed. Business name: {res['business_name']}")
 
+            time.sleep(0.2)
+
         next_button = page.locator("button.page-btn", has_text="Next")
         
         try:
