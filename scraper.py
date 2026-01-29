@@ -4,9 +4,6 @@ import json
 
 from playwright.sync_api import sync_playwright, Playwright
 
-# To Do:
-# - add error handling
-
 BASE_URL = "https://scraping-trial-test.vercel.app"
 OUTPUT_FILE = "output.json"
 SEARCH_QUERY = "farms corp"
