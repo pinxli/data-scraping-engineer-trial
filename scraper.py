@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import logging
 
 from playwright.sync_api import sync_playwright, Playwright
@@ -74,8 +75,11 @@ def run(playwright: Playwright):
     page.fill("input[id='q']", SEARCH_QUERY)
     page.click("button:has-text('Search')")
 
+    current_page = 1
     results = []
     while True:
+        logging.info(f"Processing page {current_page}...")
+
         page.wait_for_selector("table tbody tr")
         
         rows = page.locator("table tbody tr")
@@ -85,13 +89,13 @@ def run(playwright: Playwright):
             res = _process_data(row, page)
             
             if not res:
-                logging.warning(f"Failed to process record {i + 1}. Skipping...")
+                logging.warning(f"Failed to process record {i + 1} in page {current_page}. Skipping...")
                 continue
             
             results.append(res)
-            logging.info(f"Record processed. Business name: {res['business_name']}")
+            logging.info(f"Record processed. {res['business_name']}")
 
-            time.sleep(0.2)
+            time.sleep(DELAY / 5) # row delay
 
         next_button = page.locator("button.page-btn", has_text="Next")
         
@@ -106,6 +110,9 @@ def run(playwright: Playwright):
         first_row_text = rows.first.inner_text()
 
         next_button.click()
+        time.sleep(DELAY) # page delay
+
+        current_page += 1
         
         page.wait_for_function(
             """prev => {
